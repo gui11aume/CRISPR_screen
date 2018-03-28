@@ -18,3 +18,15 @@ The sequences of the 4 forward primers are
 
 The reverse primer is
 `CAAGCAGAAGACGGCATACGAGATNNNNNNNNGTGACTGGAGTTCAGACGTGTGCTCTTCCGATCTCCAATTCCCACTCCTTTCAAGACCT`
+
+##Extract gRNAs
+
+`python extract_gRNA.py file.fatsq | seeq -d2 > file.stc`
+
+##Map reads in the genome
+`bwa mem -T15 -L5,0 index <(python bcd_to_fasta.py file.stc) | samtools view -Sq6 - > file.sam`
+
+##Get coordinates of exons
+`curl  -s "http://hgdownload.cse.ucsc.edu/goldenPath/hg19/database/knownGene.txt.gz" | gunzip -c | awk '{n=int($8); split($9,S,/,/);split($10,E,/,/); for(i=1;i<=n;++i) {printf("%s,%s,%s,%s,%s\n",$1,$2,$3,S[i],E[i]);} }' > exons.txt`
+
+##Map gRNAs to exons
