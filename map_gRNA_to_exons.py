@@ -4,6 +4,7 @@
 import sys
 
 from collections import defaultdict
+from math import log
 
 class Intvl:
    def __init__(self, x, y, data=None):
@@ -71,15 +72,31 @@ def exons_to_interval_tree(f):
    # Lines to parse as the following.
    # uc001aaa.3,chr1,+,11873,12227
    for line in f:
-      (gene,chr,strand,start,end) = line.rstrip().split(',')
-      set_dict[chr].add(Intvl(int(start), int(end), gene))
+      (gene,chrom,strand,start,end) = line.rstrip().split(',')
+      set_dict[chrom].add(Intvl(int(start), int(end), gene))
    tree_dict = dict()
-   for chr,intvl_set in set_dict.items():
-      tree_dict[chr] = IntvlNode.create_tree(intvl_set)
+   for chrom,intvl_set in set_dict.items():
+      tree_dict[chrom] = IntvlNode.create_tree(intvl_set)
    return tree_dict
+
+def map_reads_to_exons(f, tree_dict):
+   score = defaultdict(float)   
+   for line in f:
+      # File is assumed to be in sam format.
+      items = line.split()
+      nreads = int(items[0].split('_')[-1])
+      chrom = items[2]
+      pos = int(items[3])
+      for hit in tree_dict[chrom].query(pos):
+         score[hit.data] += log(nreads)
+   for gene in sorted(score, key=score.get, reverse=True):
+      print gene, score[gene]
 
 
 if __name__ == '__main__':
+   # Convert exon locations to interval tress for fast search.
    with open(sys.argv[1]) as f:
       tree_dict = exons_to_interval_tree(f)
-   for hit in tree_dict['chr1'].query(12000): print hit.data
+   # Intersect read positions with exons.
+   with open(sys.argv[2]) as f:
+      map_reads_to_exons(f, tree_dict)
