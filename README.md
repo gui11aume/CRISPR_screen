@@ -1,3 +1,6 @@
+This procedure describes what I do to analyze the results of screens
+performed with lentiCRISPR v2 (https://www.addgene.org/52961/).
+
 The genomic DNA is amplified with 4 staggered forward primers. This is to
 avoid having the same sequence in every read (the constant sequence right
 in front of the gRNA). Also, the primers contain a random stretch of BVHD

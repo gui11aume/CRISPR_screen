@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
 
+import random
 import sys
 
 from collections import defaultdict
@@ -74,29 +75,55 @@ def exons_to_interval_tree(f):
    for line in f:
       (gene,chrom,strand,start,end) = line.rstrip().split(',')
       set_dict[chrom].add(Intvl(int(start), int(end), gene))
-   tree_dict = dict()
+   dTree = dict()
    for chrom,intvl_set in set_dict.items():
-      tree_dict[chrom] = IntvlNode.create_tree(intvl_set)
-   return tree_dict
+      dTree[chrom] = IntvlNode.create_tree(intvl_set)
+   return dTree
 
-def map_reads_to_exons(f, tree_dict):
-   score = defaultdict(float)   
+
+def map_reads_to_exons(f, dTree):
+   dScore = defaultdict(float)
+   dNread = dict()
    for line in f:
       # File is assumed to be in sam format.
       items = line.split()
       nreads = int(items[0].split('_')[-1])
       chrom = items[2]
       pos = int(items[3])
-      for hit in tree_dict[chrom].query(pos):
-         score[hit.data] += log(nreads)
-   for gene in sorted(score, key=score.get, reverse=True):
-      print gene, score[gene]
+      dNread[(chrom,pos)] = nreads
+      for hit in dTree[chrom].query(pos):
+         dScore[hit.data] += log(nreads)
+   # Perform 100 bootstraps.
+   dBootstrap = defaultdict(lambda: [0.0] * 100)
+   for (chrom,pos) in dNread.keys():
+      genes = [hit.data for hit in dTree[chrom].query(pos)]
+      if not genes: continue
+      for bootn in range(100):
+         # Sample a random number of reads.
+         nreads = random.choice(dNread.values())
+         for gene in genes:
+            dBootstrap[gene][bootn] += log(nreads)
+   # Compute bootstrap average and extremes.
+   dBootav = dict()
+   dBoothi = dict()
+   for gene in dBootstrap:
+      dBootav[gene] = sum(dBootstrap[gene]) / 100
+      dBoothi[gene] = max(dBootstrap[gene])
+   genes_in_score_order = sorted(dScore, key=dScore.get, reverse=True)
+   genes_in_boot_order = sorted(dBootav, key=dBootav.get, reverse=True)
+   # Print scores (and rank-matched bootstrap scores).
+   for rank in range(len(genes_in_score_order)):
+      gene  = genes_in_score_order[rank]
+      score = dScore[gene]
+      boot  = dBootav[genes_in_boot_order[rank]]
+      hi    = dBoothi[genes_in_boot_order[rank]]
+      print gene, score, boot, hi
 
 
 if __name__ == '__main__':
    # Convert exon locations to interval tress for fast search.
    with open(sys.argv[1]) as f:
-      tree_dict = exons_to_interval_tree(f)
+      dTree = exons_to_interval_tree(f)
    # Intersect read positions with exons.
    with open(sys.argv[2]) as f:
-      map_reads_to_exons(f, tree_dict)
+      map_reads_to_exons(f, dTree)
