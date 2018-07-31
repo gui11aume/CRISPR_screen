@@ -24,7 +24,7 @@ The reverse primer is
 
 #### Extract gRNAs
 
-`python extract_gRNA.py file.fatsq | seeq -d2 > file.stc`
+`python extract_gRNA.py file.fatsq > file.stc`
 
 #### Map reads in the genome
 `bwa mem -T15 -L5,0 index <(python bcd_to_fasta.py file.stc) | samtools view -Sq6 - > file.sam`
