@@ -8,6 +8,7 @@ nucleotides, the purpose of which is to create some diversity at the
 beginning of the read (they carry no information).
 
 The constant part in front of the gRNA is `ACTCTTGTGGAAAGGACGAAACACCG`.
+The sequence after the gRNA in the plasmid is `TTTTAGAGCTAGAAAT`.
 The P5 sequence is `AATGATACGGCGACCACCGAGATCT`.
 The P7 sequence is `CAAGCAGAAGACGGCATACGAGAT`.
 The forward Illumina sequencing primer is `ACACTCTTTCCCTACACGACGCTCTTCCGATCT`.
@@ -24,7 +25,7 @@ The reverse primer is
 
 #### Extract gRNAs
 
-`python extract_gRNA.py file.fatsq > file.stc`
+`python extract_gRNA.py file.fatsq | starcode -d2 > file.stc`
 
 #### Map reads in the genome
 `bwa mem -T15 -L5,0 index <(python bcd_to_fasta.py file.stc) | samtools view -Sq6 - > file.sam`
