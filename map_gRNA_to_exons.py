@@ -2,10 +2,13 @@
 # -*- coding:utf-8 -*-
 
 import random
+import re
 import sys
 
 from collections import defaultdict
 from math import log
+
+from gzopen import gzopen
 
 class Intvl:
    def __init__(self, x, y, data=None):
@@ -68,12 +71,43 @@ class IntvlNode:
       return root
 
 
-def exons_to_interval_tree(f):
+def get_pair(stringlist):
+   tx = gname = None
+   for string in stringlist:
+      if string.startswith('transcript_id'):
+         tx = re.search(r'ENST\d+', string).group()
+         continue
+      if string.startswith('gene_name'):
+         (gname,) = re.search(r'"([^"]+)"', string).groups()
+         continue
+   return tx, gname
+
+
+def read_dict(f):
+   cast = dict()
+   for line in f:
+      if line[0] == '#':
+         continue
+      items = line.split('\t')
+      annot = re.split(r';\s*', items[8])
+      try:
+         tx, gname = get_pair(annot)
+      except AttributeError:
+         continue
+      if tx is not None and gname is not None:
+         cast[tx] = gname
+   return cast
+
+
+def exons_to_interval_tree(f, cast):
    set_dict = defaultdict(set)
    # Lines to parse as the following.
    # uc001aaa.3,chr1,+,11873,12227
    for line in f:
-      (gene,chrom,strand,start,end) = line.rstrip().split(',')
+      (tx,chrom,strand,start,end) = line.rstrip().split(',')
+      tx = re.sub(r'\.\d+$', '', tx)
+      if tx not in cast: continue
+      gene = cast[tx]
       set_dict[chrom].add(Intvl(int(start), int(end), gene))
    dTree = dict()
    for chrom,intvl_set in set_dict.items():
@@ -82,48 +116,36 @@ def exons_to_interval_tree(f):
 
 
 def map_reads_to_exons(f, dTree):
-   dScore = defaultdict(float)
-   dNread = dict()
+   sys.stdout.write('sgRNA\tgene\tcount\n')
    for line in f:
       # File is assumed to be in sam format.
       items = line.split()
-      nreads = int(items[0].split('_')[-1])
+      sgRNA = items[9]
+      nreads = items[0].split('_')[-1]
       chrom = items[2]
       pos = int(items[3])
-      dNread[(chrom,pos)] = nreads
+      if chrom not in dTree:
+         # Do not consider alternate chromosomes
+         # do not add them to 'dNread'.
+         continue
+      seen = set()
       for hit in dTree[chrom].query(pos):
-         dScore[hit.data] += log(nreads)
-   # Perform 100 bootstraps.
-   dBootstrap = defaultdict(lambda: [0.0] * 100)
-   for (chrom,pos) in dNread.keys():
-      genes = [hit.data for hit in dTree[chrom].query(pos)]
-      if not genes: continue
-      for bootn in range(100):
-         # Sample a random number of reads.
-         nreads = random.choice(dNread.values())
-         for gene in genes:
-            dBootstrap[gene][bootn] += log(nreads)
-   # Compute bootstrap average and extremes.
-   dBootav = dict()
-   dBoothi = dict()
-   for gene in dBootstrap:
-      dBootav[gene] = sum(dBootstrap[gene]) / 100
-      dBoothi[gene] = max(dBootstrap[gene])
-   genes_in_score_order = sorted(dScore, key=dScore.get, reverse=True)
-   genes_in_boot_order = sorted(dBootav, key=dBootav.get, reverse=True)
-   # Print scores (and rank-matched bootstrap scores).
-   for rank in range(len(genes_in_score_order)):
-      gene  = genes_in_score_order[rank]
-      score = dScore[gene]
-      boot  = dBootav[genes_in_boot_order[rank]]
-      hi    = dBoothi[genes_in_boot_order[rank]]
-      print gene, score, boot, hi
+         if hit.data in seen: continue
+         # Every hit is a gene intersected by the position
+         # of the gRNA (more specifically one exon of the
+         # gene is intersected by the position of the gRNA).
+         sys.stdout.write('%s\t%s\t%s\n' % (sgRNA, hit.data, nreads))
+         seen.add(hit.data)
 
 
 if __name__ == '__main__':
+   sys.setrecursionlimit(10000)
+   # Prepare transcript-gene lookup
+   with gzopen(sys.argv[1]) as f:
+      cast = read_dict(f)
    # Convert exon locations to interval tress for fast search.
-   with open(sys.argv[1]) as f:
-      dTree = exons_to_interval_tree(f)
+   with gzopen(sys.argv[2]) as f:
+      dTree = exons_to_interval_tree(f, cast)
    # Intersect read positions with exons.
-   with open(sys.argv[2]) as f:
+   with gzopen(sys.argv[3]) as f:
       map_reads_to_exons(f, dTree)
