@@ -36,20 +36,6 @@ The reverse primer is
 #### Map gRNAs to exons
 `python map_gRNA_to_exons.py exons.txt file.sam > file.scores`
 
-#### Example output
-
-Below is an example of output.
-
-    sgRNA   gene    count
-    CAGATTCCTCATGTTTGTGC    SNAI2   237
-    GCAGACTTTGCGGCTATGCG    KIF20A  89
-    ACCTGTCAAGCAGTATCCCA    KHDRBS1 86
-    CATGTGCTGGTCCTGTAGGC    OR52B4  69
-
-
-The first column is the sequence of the sgRNA. The second column is the
-name of the gene where it maps. The third column is the number of reads.
-
 #### Merge results into a single file
 `python merge_scores.py *.scores > scores.txt`
 
