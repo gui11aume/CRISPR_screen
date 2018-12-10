@@ -49,3 +49,21 @@ Below is an example of output.
 
 The first column is the sequence of the sgRNA. The second column is the
 name of the gene where it maps. The third column is the number of reads.
+
+#### Merge results into a single file
+`python merge_scores.py *.scores > scores.txt`
+
+#### Example output
+
+Below is an example of output.
+
+    sgRNA                   gene     file1   file2
+    CAGATTCCTCATGTTTGTGC    SNAI2    237        12
+    GCAGACTTTGCGGCTATGCG    KIF20A   89        231
+    ACCTGTCAAGCAGTATCCCA    KHDRBS1  86          0
+    CATGTGCTGGTCCTGTAGGC    OR52B4   69          0
+
+
+The first column is the sequence of the sgRNA. The second column is the
+name of the gene where it maps. The following columns are the number of
+reads in each file listed in input.
