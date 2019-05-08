@@ -53,3 +53,8 @@ Below is an example of output.
 The first column is the sequence of the sgRNA. The second column is the
 name of the gene where it maps. The following columns are the number of
 reads in each file listed in input.
+
+The file `scores.txt` can be processed by MAGeCK. For instance, one can
+use the command
+
+    mageck test -c file1 -t file2 -k scores.txt
