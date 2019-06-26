@@ -30,11 +30,14 @@ The reverse primer is
 #### Map reads in the genome
 `bwa mem -T15 -L5,0 index <(python bcd_to_fasta.py file.stc) | samtools view -Sq6 - > file.sam`
 
+#### Get reference genes
+`curl -S ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/gencode.v24.annotation.gtf.gz > gencode.v24.annotation.gtf.gz`
+
 #### Get coordinates of exons
 `curl  -s "http://hgdownload.cse.ucsc.edu/goldenPath/hg19/database/knownGene.txt.gz" | gunzip -c | awk '{n=int($8); split($9,S,/,/);split($10,E,/,/); for(i=1;i<=n;++i) {printf("%s,%s,%s,%s,%s\n",$1,$2,$3,S[i],E[i]);} }' > exons.txt`
 
 #### Map gRNAs to exons
-`python map_gRNA_to_exons.py exons.txt file.sam > file.scores`
+`python map_gRNA_to_exons.py gencode.v24.annotation.gtf.gz exons.txt file.sam > file.scores`
 
 #### Merge results into a single file
 `python merge_scores.py *.scores > scores.txt`
